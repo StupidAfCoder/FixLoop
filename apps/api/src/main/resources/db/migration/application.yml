@@ -1,0 +1,19 @@
+# this is the config file for the supabase db
+
+spring:
+  datasource:
+    url: ${postgresql://postgres:[VxDGzAFSBqBJiFZK]@db.mrisfsxlrdbsydklyygy.supabase.co:5432/postgres}
+    username: ${postgres}
+    password: ${VxDGzAFSBqBJiFZK}
+  flyway:
+    url: ${db.mrisfsxlrdbsydklyygy.supabase.co}
+    user: ${postgres}
+    password: ${VxDGzAFSBqBJiFZK}
+    locations: classpath:db/migration
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+
+server:
+  port: ${PORT:5432}
