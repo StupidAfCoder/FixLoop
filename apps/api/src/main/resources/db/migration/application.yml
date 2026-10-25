@@ -6,7 +6,7 @@ spring:
     username: ${postgres}
     password: ${VxDGzAFSBqBJiFZK}
   flyway:
-    url: ${db.mrisfsxlrdbsydklyygy.supabase.co}
+    url: ${postgresql://postgres:[VxDGzAFSBqBJiFZK]@db.mrisfsxlrdbsydklyygy.supabase.co:5432/postgres}
     user: ${postgres}
     password: ${VxDGzAFSBqBJiFZK}
     locations: classpath:db/migration
