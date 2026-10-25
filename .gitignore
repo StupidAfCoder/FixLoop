@@ -1,0 +1,10 @@
+.env
+*.env
+.idea/
+.vscode/
+.dart_tool/
+build/
+target/
+*.class
+.gradle/
+node_modules/
