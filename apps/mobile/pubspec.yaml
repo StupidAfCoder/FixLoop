@@ -1,0 +1,19 @@
+name: fixloop_mobile
+description: Fix Loop's Flutter starter for Android and web.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.11.5 <4.0.0'
+  flutter: '>=3.41.9'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

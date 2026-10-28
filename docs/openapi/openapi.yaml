@@ -1,0 +1,59 @@
+openapi: 3.0.3
+info:
+  title: Fix Loop API (foundation)
+  version: 0.1.0
+  description: >-
+    Only the health endpoints exist today. Authentication, directory and
+    complaint endpoints are planned, not implemented.
+paths:
+  /api/v1/health:
+    get:
+      summary: API liveness (does not check the database)
+      operationId: getApiHealth
+      responses:
+        '200':
+          description: API process is responding
+          headers:
+            X-Trace-Id:
+              description: Opaque identifier for this request
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  service:
+                    type: string
+                    example: fixloop-api
+  /actuator/health:
+    get:
+      summary: Readiness (includes the database)
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Application and database are healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActuatorHealth'
+        '503':
+          description: A required component is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActuatorHealth'
+components:
+  schemas:
+    ActuatorHealth:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: UP
