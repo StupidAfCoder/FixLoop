@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: fixloop-api
+  datasource:
+    # Use a JDBC URL. Compose supplies the db hostname inside its network.
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fixloop}
+    username: ${DATABASE_USER:fixloop}
+    password: ${DATABASE_PASSWORD:}
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: true
+
+server:
+  address: 0.0.0.0
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true

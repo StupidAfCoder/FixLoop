@@ -1,9 +1,28 @@
+# Local configuration and secrets
 .env
+.env.*
+!.env.example
 *.env
+*.jks
+*.keystore
+key.properties
+
+# Editors and OS files
 .idea/
 .vscode/
+.DS_Store
+
+# Flutter/Dart
 .dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+apps/mobile/android/local.properties
 build/
+coverage/
+
+# Java / Gradle / Node
 target/
 *.class
 .gradle/
