@@ -9,15 +9,15 @@ permissions:
 
 jobs:
   api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # Disposable CI database only; never use this password for real data.
       POSTGRES_PASSWORD: ci-only-password
       POSTGRES_PORT: '55432'
       API_PORT: '18080'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -51,12 +51,12 @@ jobs:
         run: docker compose down --volumes --remove-orphans
 
   flutter:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: apps/mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.9'

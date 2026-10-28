@@ -64,6 +64,15 @@ class DatabaseMigrationIT {
     }
 
     @Test
+    void generatedApiDocsAndSwaggerUiArePublic() {
+        ResponseEntity<String> openApi = http.getForEntity("/v3/api-docs", String.class);
+        assertThat(openApi.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(openApi.getBody()).contains("\"/api/v1/health\"");
+        assertThat(http.getForEntity("/swagger-ui/index.html", String.class).getStatusCode())
+            .isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void auditEventsRejectUpdatesAndDeletes() {
         UUID reporter = UUID.randomUUID();
         UUID category = UUID.randomUUID();
