@@ -1,15 +1,26 @@
 openapi: 3.0.3
 info:
-  title: Fix Loop API (foundation)
-  version: 0.1.0
+  title: Fix Loop API
+  version: 0.2.0
   description: >-
-    Only the health endpoints exist today. Authentication, directory and
-    complaint endpoints are planned, not implemented.
+    What exists today: health checks, student registration, login, rotating
+    refresh tokens, logout, password change and the caller's own account.
+    Directory, complaint, workflow, notification, admin and statistics
+    endpoints are designed in the project bible but are not implemented yet.
+    Every failed request uses the same error shape.
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Me
+
 paths:
   /api/v1/health:
     get:
+      tags: [Health]
       summary: API liveness (does not check the database)
       operationId: getApiHealth
+      security: []
       responses:
         '200':
           description: API process is responding
@@ -31,10 +42,13 @@ paths:
                   service:
                     type: string
                     example: fixloop-api
+
   /actuator/health:
     get:
+      tags: [Health]
       summary: Readiness (includes the database)
       operationId: getReadiness
+      security: []
       responses:
         '200':
           description: Application and database are healthy
@@ -48,8 +62,401 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ActuatorHealth'
+
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a student account
+      description: >-
+        The email must be on the allowed-domain list (default `bmu.edu.in`) or
+        demo-mode open signup must be enabled. Passwords are at least 12
+        characters. The created account always has the STUDENT role; staff and
+        supervisor accounts are created by an administrator.
+      operationId: registerStudent
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created
+          headers:
+            X-Trace-Id:
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '403':
+          description: Registration is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: An account already exists for the address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Exchange email and password for tokens
+      description: >-
+        Failures are deliberately indistinguishable: an unknown address, a
+        wrong password and a disabled account all return 401
+        INVALID_CREDENTIALS with the same message.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: A short-lived access token and a rotating refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          description: Wrong email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate the refresh token and issue a new access token
+      description: >-
+        Every use rotates the refresh token and revokes the old one. Presenting
+        an already-rotated token revokes the whole session family.
+      operationId: refresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          description: The refresh token is unknown, expired or already used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke the presented refresh token
+      description: >-
+        The refresh token in the body is the credential, so no access token is
+        required: a client whose 15-minute access token has expired can still
+        end its session. Unknown or already-revoked tokens also return 204.
+      operationId: logout
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Revoked, or already invalid
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change the caller's password
+      description: Requires the current password and revokes every other session.
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed; other sessions are revoked
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/me:
+    get:
+      tags: [Me]
+      summary: The caller's own account, role and scope
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The authenticated account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /api/v1/attachments:
+    post:
+      tags: [Attachments]
+      summary: Upload a complaint photograph
+      description: >-
+        The bytes decide what the file is: only JPEG, PNG and WebP content is
+        stored, and a declared type that contradicts the content is refused.
+        The response carries the storage key and a SHA-256 checksum; the key is
+        attached to a complaint when the complaint endpoints exist. There is no
+        download endpoint yet, because reading a photograph has to be authorised
+        against the complaint it belongs to.
+      operationId: uploadAttachment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG or WebP, at most 8 MB by default
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentResponse'
+        '400':
+          $ref: '#/components/responses/ClientError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ClientError:
+      description: The request was rejected
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthenticated:
+      description: No token, an expired token, or a token that is no longer valid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyRequests:
+      description: Too many attempts; wait and try again
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    PayloadTooLarge:
+      description: The upload is larger than the server accepts
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnsupportedMediaType:
+      description: The content is not an accepted photograph format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
   schemas:
+    AttachmentResponse:
+      type: object
+      required: [storageKey, mimeType, sizeBytes, checksumSha256]
+      properties:
+        storageKey:
+          type: string
+          example: 9f/3a/0f8f2c7e-4b1d-4a55-9f23-6c0b8e1d2a44.jpg
+        mimeType:
+          type: string
+          example: image/jpeg
+        sizeBytes:
+          type: integer
+          format: int64
+          example: 184320
+        checksumSha256:
+          type: string
+          example: 9f3a1c8b2d4e6f8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708
+
+    ApiError:
+      type: object
+      required: [code, message, traceId]
+      description: >-
+        One shape for every error. `code` is stable and machine-readable;
+        `traceId` is what a user quotes when reporting a problem.
+      properties:
+        code:
+          type: string
+          example: VALIDATION_FAILED
+        message:
+          type: string
+          example: Some fields are not valid.
+        traceId:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            password: must be at least 12 characters
+
+    RegisterRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          maxLength: 200
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 120
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          maxLength: 200
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          maxLength: 200
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          maxLength: 200
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 200
+
+    TokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresInSeconds, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          format: int64
+          example: 900
+        refreshToken:
+          type: string
+
+    UserResponse:
+      type: object
+      required: [id, email, fullName, role, mustChangePassword]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [STUDENT, STAFF, SUPERVISOR, ADMIN]
+        departmentId:
+          type: string
+          format: uuid
+          nullable: true
+        scopeLocationId:
+          type: string
+          format: uuid
+          nullable: true
+        mustChangePassword:
+          type: boolean
+
     ActuatorHealth:
       type: object
       required: [status]

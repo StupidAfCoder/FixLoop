@@ -13,6 +13,19 @@ services:
       DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-4}
       DATABASE_SSL_ROOT_CERT: /run/secrets/supabase-ca.crt
       PORT: 8080
+      # Blank means an ephemeral signing key: fine for a throwaway local run,
+      # never for a deployment. Use at least 32 bytes.
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_ISSUER: ${JWT_ISSUER:-https://fixloop.local}
+      ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-bmu.edu.in}
+      ALLOWED_WEB_ORIGINS: ${ALLOWED_WEB_ORIGINS:-}
+      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
+      # Never false in a deployment: infra/deploy/preflight.sh refuses it.
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      # Uploaded photographs. Blank means the container's temporary directory,
+      # which is fine locally and wrong for a deployment.
+      ATTACHMENT_STORAGE_DIR: ${ATTACHMENT_STORAGE_DIR:-}
+      ATTACHMENT_MAX_BYTES: ${ATTACHMENT_MAX_BYTES:-8388608}
     volumes:
       - type: bind
         source: ${SUPABASE_CA_CERT_PATH:?Set the path to the Supabase CA certificate in .env}

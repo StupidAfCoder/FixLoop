@@ -1,5 +1,6 @@
 package com.fixloop.common;
 
+import com.fixloop.config.AuthConfiguration;
 import com.fixloop.config.SecurityConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(HealthController.class)
-@Import(SecurityConfiguration.class)
+@Import({SecurityConfiguration.class, AuthConfiguration.class})
 class HealthControllerTest {
     private static final String UUID_PATTERN =
         "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";

@@ -73,6 +73,8 @@ jobs:
           count=$(docker compose -f docker-compose.yml -f .github/ci/compose-db.yml exec -T ci-db \
             psql -U fixloop_ci -d fixloop_ci -Atc 'SELECT count(*) FROM categories')
           test "$count" = 2
+      - name: Smoke-test the identity endpoints
+        run: bash infra/smoke/auth-smoke.sh http://127.0.0.1:18080
       - name: Show disposable CI logs on failure
         if: ${{ failure() && env.CI_CERT_DIR != '' }}
         run: docker compose -f docker-compose.yml -f .github/ci/compose-db.yml logs --no-color
